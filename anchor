@@ -1,0 +1,78 @@
+#include <WiFi.h>
+#include <WiFiAP.h>
+#include <WiFiClient.h>
+#include <WiFiGeneric.h>
+#include <WiFiMulti.h>
+#include <WiFiSTA.h>
+#include <WiFiScan.h>
+#include <WiFiServer.h>
+#include <WiFiType.h>
+#include <WiFiUdp.h>
+
+
+
+
+
+#include <SPI.h>
+#include "DW1000Ranging.h"
+#include "DW1000.h"
+
+#include <HTTPClient.h>
+
+#define SPI_SCK 18
+#define SPI_MISO 19
+#define SPI_MOSI 23
+#define DW_CS 2
+
+// connection pins
+const uint8_t PIN_RST = 34; // reset pin
+const uint8_t PIN_IRQ = 35; // irq pin
+const uint8_t PIN_SS = 2;   // spi select pin
+
+const char* ssid = "CWC-7053359";
+const char* password = "rt6xzfrLnc6";
+const char* serverName = "http://192.168.0.6/UWBDATABASE/insert_distance1.inc.php";
+
+void setup() {
+  Serial.begin(115200);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("WiFi connected.");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  if(WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    http.begin(serverName);
+    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+
+    float d[3] = {5.0, 10.0, 15.0};  // example distances to anchors
+    float current_tag_position[2] = {2.5, 3.5};  // example coordinates X, Y
+
+    String httpRequestData = "distance1=" + String(d[0]) + "&distance2=" + String(d[1]) +
+                             "&distance3=" + String(d[2]) + "&coordinateX=" + String(current_tag_position[0]) +
+                             "&coordinateY=" + String(current_tag_position[1]);
+
+    int httpResponseCode = http.POST(httpRequestData);
+
+    if (httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.println(httpResponseCode);
+      Serial.println(response);
+    } else {
+      Serial.print("Error on sending POST: ");
+      Serial.println(httpResponseCode);
+    }
+
+    http.end();
+  }
+
+  delay(10000); // Delay for demonstration purposes
+}

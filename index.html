@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indoor Map Tracking</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+        body {
+            display: flex;
+            align-items: flex-start;
+            height: 100vh;
+            margin: 0;
+        }
+        #mainContainer {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            width:100%;
+            justify-content: space-evenly;
+        }
+        #mapContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-left: 20px;
+        }
+        #map {
+            height: 1350px;
+            width: 900px;
+        }
+        #polylineButton, #clearPolylineButton {
+            margin-top: 10px;
+        }
+        .grid-label {
+            font-size: 15px;
+            color: red;
+        }
+        .grid-label1 .text-span  {
+            font-size: 15px;
+            color: red;
+            margin-left: -55px;
+            padding-right : 20px;
+        }
+        #coordinateTable {
+            margin-top: 20px;
+            border-collapse: collapse;
+            width: 300px;
+        }
+        #coordinateTable, #coordinateTable th, #coordinateTable td {
+            border: 1px solid black;
+        }
+        #coordinateTable th, #coordinateTable td {
+            padding: 8px;
+            text-align: center;
+        }
+        #coordinateTable th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div id="mainContainer">
+        <div id="tableContainer">
+            <table id="coordinateTable">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>X (meters)</th>
+                        <th>Y (meters)</th>
+                        <th>Distance1</th>
+                        <th>Distance2</th>
+                        <th>Distance3</th>
+                    </tr>
+                </thead>
+                <tbody id="coordinateTableBody">
+                    <tr>
+                        <td id="timestampCell"></td>
+                        <td id="xCell"></td>
+                        <td id="yCell"></td>
+                        <td id="distance1Cell"></td>
+                        <td id="distance2Cell"></td>
+                        <td id="distance3Cell"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="mapContainer">
+            <div id="map"></div>
+            <button id="polylineButton">Draw Polyline</button>
+            <button id="clearPolylineButton">Clear Polyline</button>
+        </div>
+    </div>
+    <script>
+        var mapBounds = [[0, 0], [2150, 1396]]; // Update with the actual dimensions of your map image
+
+        // Initialize the map ASSIIGNS coordinate reference system to it
+        var map = L.map('map', {
+            crs: L.CRS.Simple,
+            minZoom: -6
+        });
+
+        // Add the custom image overlay
+        var imageUrl = 'finalmap.jpg'; // Ensure this path is correct
+        var image = L.imageOverlay(imageUrl, mapBounds).addTo(map);
+
+        // Set the bounds of the map
+        map.setMaxBounds(mapBounds);
+
+        // Fit the map to the bounds to ensure it shows correctly
+        map.fitBounds(mapBounds);
+
+        // Add a marker for the tag
+        var tagMarker = L.marker([0, 0]).addTo(map);
+
+        function jsmap(x, in_min, in_max, out_min, out_max) {
+            return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+        }
+
+        var coordinates = [];
+        var polyline = null;
+        var polylines = []; // Store all polylines
+
+        // Function to fetch coordinates
+        function fetchCoordinates() {
+            fetch('http://localhost/UWBDATABASE/insert_distance1.inc.php') // Ensure this path is correct
+                .then(response => response.json())
+                .then(data => {
+                    var x = jsmap(data.x, 0, 14.490, 0, 1396);
+                    var y = jsmap(data.y, 0, 22.421, 0, 2150);
+                    var timestamp = Date.now();
+
+                    coordinates.push({ latLng: [y, x], timestamp, distance1: data.distance1, distance2: data.distance2, distance3: data.distance3 });
+
+                    var latestCoordinate = coordinates[coordinates.length - 1];
+                    console.log(latestCoordinate);
+                    if (latestCoordinate) {
+                        tagMarker.setLatLng(latestCoordinate.latLng);
+                        updateTable(latestCoordinate);
+                    }
+                })
+                .catch(error => console.error('Error fetching coordinates:', error));
+        }
+
+        var polylineButton = document.getElementById('polylineButton');
+        polylineButton.addEventListener("click", updatePolylineAndInfo);
+
+        var clearPolylineButton = document.getElementById('clearPolylineButton');
+        clearPolylineButton.addEventListener("click", clearPolylines);
+
+        // Function to update the polyline and info display
+        function updatePolylineAndInfo() {
+            fetch('http://localhost/UWBDATABASE/polyline.php') // Ensure this path is correct
+                .then(response => response.json())
+                .then(data => {
+                    var latlong = data.map(coordinate => [jsmap(coordinate[1], 0, 22.421, 0, 2150), jsmap(coordinate[0], 0, 14.490, 0, 1396)]);
+                    var newPolyline = L.polyline(latlong, { color: 'red' }).addTo(map);
+
+                    // Store the new polyline in the array
+                    polylines.push(newPolyline);
+
+                    // Zoom the map
+                    // Zoom the map to the polyline
+                    map.fitBounds(newPolyline.getBounds());
+                });
+        }
+
+        function clearPolylines() {
+
+            fetch('http://localhost/UWBDATABASE/deletepolyline.php', { method: 'DELETE' })
+                .then(response => response.json())
+                .then(data => console.log(data))
+                .catch(error => console.error('Error deleting old entries:', error));
+            polylines.forEach(polyline => {
+                map.removeLayer(polyline);
+            });
+            polylines = []; // Reset the polylines array
+        }
+
+        // Fetch coordinates every second
+        setInterval(fetchCoordinates, 1000);
+
+        // Function to update the table with new coordinates
+        function updateTable(coordinate) {
+            var timestampCell = document.getElementById('timestampCell');
+            var xCell = document.getElementById('xCell');
+            var yCell = document.getElementById('yCell');
+            var distance1Cell = document.getElementById('distance1Cell');
+            var distance2Cell = document.getElementById('distance2Cell');
+            var distance3Cell = document.getElementById('distance3Cell');
+
+            timestampCell.textContent = new Date(coordinate.timestamp).toLocaleString();
+            xCell.textContent = (coordinate.latLng[1] * 14.490 / 1396).toFixed(2);
+            yCell.textContent = (coordinate.latLng[0] * 22.421 / 2150).toFixed(2);
+            distance1Cell.textContent = coordinate.distance1;
+            distance2Cell.textContent = coordinate.distance2;
+            distance3Cell.textContent = coordinate.distance3;
+        }
+
+        // Function to create grid lines
+        function createGridLines() {
+            var step = 100; // Set the step size for grid lines in pixels (adjust as needed)
+            for (var i = 0; i <= 1396; i += step) {
+
+                // Vertical lines
+                L.polyline([[0, i], [2150, i]], { color: 'gray', weight: 1, opacity: 0.5 }).addTo(map);
+            }
+
+            for (var i = 0; i <= 2150; i += step) {
+                // Add labels for grid lines
+                if (i > 0) {
+                    // Y axis labels
+                    L.marker([i, 0], {
+                        icon: L.divIcon({
+                            className: 'grid-label1',
+                            html: `<div class="text-span">${(i * 22.421 / 2150).toFixed(2)}m</span></div>`,
+                        })
+                    }).addTo(map);
+                }
+            }
+
+            for (var i = 0; i <= 2150; i += step) {
+                // Horizontal lines
+                L.polyline([[i, 0], [i, 1396]], { color: 'gray', weight: 1, opacity: 0.5 }).addTo(map);
+            }
+
+            for (var i = 0; i <= 1396; i += step) {
+                L.marker([0, i], {
+                    icon: L.divIcon({
+                        className: 'grid-label',
+                        html: `<div>${(i * 14.490 / 1396).toFixed(2)}m</div>`,
+                    })
+                }).addTo(map);
+            }
+        }
+
+        // Call the function to create grid lines
+        createGridLines();
+    </script>
+</body>
+</html>

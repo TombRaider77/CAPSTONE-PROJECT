@@ -1,0 +1,79 @@
+/* styles.css */
+
+/* Body styles */
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: url('water-3007467.jpg') no-repeat center center fixed;
+    background-size: cover;
+}
+
+/* Main container styles */
+#mainContainer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    justify-content: space-evenly;
+    background-color: rgba(255, 255, 255, 0.8); /* White background with some transparency */
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.9); /* Light shadow for depth */
+}
+
+/* Table styles */
+table {
+    border-collapse: collapse;
+    width: 300px;
+    margin-top: 20px;
+    background-color: white; /* Ensure table has a white background */
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Light shadow for depth */
+}
+
+th, td {
+    border: 1px solid black;
+    padding: 8px;
+    text-align: center;
+}
+
+th {
+    background-color: #f2f2f2; /* Light gray background for table header */
+}
+
+/* Map container styles */
+#mapContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-left: 20px;
+}
+
+/* Map styles */
+#map {
+    height: 750px;
+    width: 900px;
+    border: 1px solid black; /* Add border for the map */
+    border-radius: 8px; /* Add border radius for a rounded look */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Add box shadow for depth */
+    margin-bottom: 20px; /* Add margin to separate from the button */
+}
+
+/* Button styles */
+#polylineButton, #clearPolylineButton  {
+    padding: 10px 20px;
+    background-color: #007bff; /* Blue button color */
+    color: white; /* Text color */
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s; /* Smooth transition for hover effect */
+}
+
+#polylineButton:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}
